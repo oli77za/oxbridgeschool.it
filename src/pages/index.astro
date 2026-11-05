@@ -1,0 +1,212 @@
+---
+import { getCollection, getEntry, render } from 'astro:content';
+import Icon from '../components/Icon.astro';
+import '../styles/global.css';
+
+async function section(id: string) {
+  const entry = await getEntry('sections', id);
+  if (!entry) throw new Error(`Missing required content: src/content/sections/${id}.md`);
+  return { ...entry.data, ...await render(entry) };
+}
+
+const settings = await getEntry('settings', 'site');
+if (!settings) throw new Error('Missing required content: src/content/site.md');
+const site = settings.data;
+const { Content: PrivacyContent } = await render(settings);
+
+const [courseEntries, faqEntries, serviceEntries, Hero, CoursesIntro, Method, School, ServicesIntro, FaqIntro, Contact] = await Promise.all([
+  getCollection('courses'),
+  getCollection('faqs'),
+  getCollection('services'),
+  section('hero'),
+  section('corsi'),
+  section('metodo'),
+  section('scuola'),
+  section('servizi'),
+  section('faq'),
+  section('contatti'),
+]);
+for (const [name, entries] of [['courses', courseEntries], ['faqs', faqEntries], ['services', serviceEntries]] as const) {
+  if (!entries.length) throw new Error(`Missing required content: src/content/${name}/ must contain Markdown entries`);
+}
+const courses = await Promise.all(courseEntries.sort((a, b) => a.data.order - b.data.order).map(async (entry) => ({ ...entry, ...await render(entry) })));
+const faqs = await Promise.all(faqEntries.sort((a, b) => a.data.order - b.data.order).map(async (entry) => ({ ...entry, ...await render(entry) })));
+const services = await Promise.all(serviceEntries.sort((a, b) => a.data.order - b.data.order).map(async (entry) => ({ ...entry, ...await render(entry) })));
+
+const phone = `${site.contact.dialCode}${site.contact.phone.replaceAll(' ', '')}`;
+const location = `${site.contact.city}, ${site.contact.province}`;
+const maps = `https://www.google.com/maps/search/?${new URLSearchParams({
+  api: '1',
+  query: `${site.contact.street} ${site.contact.city} ${site.contact.province}`,
+})}`;
+const canonical = new URL('/', Astro.site);
+---
+
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={site.meta.description} />
+    <meta name="theme-color" content="#f7f6f0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="it_IT" />
+    <meta property="og:title" content={site.meta.socialTitle} />
+    <meta property="og:description" content={site.meta.socialDescription} />
+    <meta property="og:image" content={new URL('/images/students.jpg', canonical)} />
+    <meta property="og:url" content={canonical} />
+    <title>{site.meta.title}</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenuto">{site.labels.skipLink}</a>
+    <div class="topbar"><span>{site.tagline}</span><a href={maps}><Icon name="pin" size={13} /> {location}</a></div>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="/" aria-label={`${site.name}, ${site.labels.homepage}`}>
+          <span class="brand-symbol" aria-hidden="true"><Icon name="book" size={28} /></span>
+          <span class="brand-wordmark">{site.wordmark}<span>{site.brandSubtitle}</span></span><span class="brand-dot" aria-hidden="true">.</span>
+        </a>
+        <button class="menu-toggle" type="button" aria-controls="navigation" aria-expanded="false" hidden>{site.labels.menu} <span aria-hidden="true">☰</span></button>
+        <nav id="navigation" aria-label={site.labels.navigation}>
+          {site.navigation.map((link) => <a href={link.href}>{link.label}</a>)}
+          <a class="button button-small" href={site.navigationAction.href}>{site.navigationAction.label} <Icon name="arrow" size={17} /></a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="contenuto">
+      <section class="hero container" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="small-line"></span> {Hero.eyebrow}</p>
+          <h1 id="hero-title">{Hero.title.map((line) => <>{line}<br /></>)}<span class="highlight">{Hero.emphasis}<svg viewBox="0 0 450 20" fill="none" aria-hidden="true"><path d="M4 13C120 2 295 1 444 9M65 18C180 8 320 7 409 14" stroke="currentColor" stroke-width="4" stroke-linecap="round" /></svg></span>.</h1>
+          <div class="hero-description"><Hero.Content /></div>
+          <div class="hero-actions">
+            <a class="button" href={site.hero.primaryAction.href}>{site.hero.primaryAction.label} <Icon name="arrow" size={19} /></a>
+            <a class="text-link" href={site.hero.secondaryAction.href}>{site.hero.secondaryAction.label} <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="hero-note"><span class="note-check"><Icon name="check" size={14} /></span> {site.hero.note}</div>
+        </div>
+        <div class="hero-visual">
+          <div class="photo-dots" aria-hidden="true"></div>
+          <img class="hero-photo" src="/images/students.jpg" width="1400" height="933" alt={site.hero.imageAlt} fetchpriority="high" />
+          <div class="hello-tag" aria-hidden="true">{site.hero.greeting}<span>{site.hero.greetingContinuation}</span><svg viewBox="0 0 80 38" fill="none"><path d="M4 7c17 25 40 27 66 8m-17-1 20-2-7 19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg></div>
+          <div class="photo-caption"><span class="caption-icon"><Icon name="globe" size={25} /></span><span>{site.hero.caption}<strong>{site.hero.captionEmphasis}</strong></span></div>
+          <span class="visual-star" aria-hidden="true">✳</span>
+        </div>
+      </section>
+
+      <div class="values-strip">
+        <div class="container values-inner">
+          {site.values.map((value, index) => <>
+            <span><Icon name={value.icon} size={value.icon === 'sun' ? 23 : 21} /> {value.label}</span>
+            {index < site.values.length - 1 && <span class="strip-star" aria-hidden="true">✦</span>}
+          </>)}
+        </div>
+      </div>
+
+      <section class="section container courses-section" id="corsi" aria-labelledby="courses-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">{CoursesIntro.eyebrow}</p><h2 id="courses-title">{CoursesIntro.title.join(' ')} <em>{CoursesIntro.emphasis}</em></h2></div>
+          <div class="section-description"><CoursesIntro.Content /></div>
+        </div>
+        <div class="course-grid">
+          {courses.map(({ id, data: course, Content }, index) => (
+            <article class={`course-card course-${index}`} id={id}>
+              <span class="course-icon"><Icon name={course.icon} size={29} /></span>
+              <p class="course-category">{course.category}</p>
+              <h3>{course.title}</h3>
+              <p class="course-description">{course.description}</p>
+              <p class="course-feature"><Icon name="check" size={16} />{course.feature}</p>
+              <details class="course-details">
+                <summary>{site.courses.expandLabel} <span aria-hidden="true">+</span></summary>
+                <Content />
+                <a class="text-link" href={`tel:${phone}`}>{site.courses.contactLabel} <Icon name="arrow" size={17} /></a>
+              </details>
+            </article>
+          ))}
+        </div>
+        <p class="course-help">{site.courses.help} <a href={site.courses.helpAction.href}>{site.courses.helpAction.label} <span aria-hidden="true">↗</span></a></p>
+      </section>
+
+      <section class="method-section" id="metodo" aria-labelledby="method-title">
+        <div class="container method-grid">
+          <div class="method-art">
+            <img src="/images/london.jpg" width="1000" height="667" alt={site.method.imageAlt} loading="lazy" />
+            <div class="method-quote"><span aria-hidden="true">“</span><p>{site.method.quote.map((line) => <>{line}<br /></>)}<em>{site.method.quoteEmphasis}</em></p><span class="quote-label">{site.method.quoteLabel}</span></div>
+            <span class="london-caption">{site.method.imageCaption}</span>
+          </div>
+          <div class="method-copy">
+            <p class="eyebrow">{Method.eyebrow}</p>
+            <h2 id="method-title">{Method.title.join(' ')}<br /><em>{Method.emphasis}</em></h2>
+            <Method.Content />
+          </div>
+        </div>
+      </section>
+
+      <section class="section container school-section" id="scuola" aria-labelledby="school-title">
+        <div class="school-intro">
+          <p class="eyebrow">{School.eyebrow}</p>
+          <h2 id="school-title">{School.title.join(' ')}<br /><em>{School.emphasis}</em></h2>
+          <School.Content />
+          <a class="text-link" href={site.schoolAction.href}>{site.schoolAction.label} <Icon name="arrow" size={19} /></a>
+        </div>
+        <div class="services-panel">
+          <span class="service-heading"><Icon name="globe" size={24} /> {ServicesIntro.eyebrow}</span>
+          <h3>{ServicesIntro.title.join(' ')}<br />{ServicesIntro.emphasis}</h3>
+          <ServicesIntro.Content />
+          {services.map(({ data, Content }) => <details><summary>{data.title} <span aria-hidden="true">+</span></summary><Content /></details>)}
+        </div>
+      </section>
+
+      <section class="faq-section">
+        <div class="container faq-grid">
+          <div><p class="eyebrow">{FaqIntro.eyebrow}</p><h2>{FaqIntro.title.join(' ')}<br /><em>{FaqIntro.emphasis}</em></h2><FaqIntro.Content /></div>
+          <div class="faq-list">{faqs.map(({ data, Content }) => <details><summary>{data.question}<span aria-hidden="true">+</span></summary><Content /></details>)}</div>
+        </div>
+      </section>
+
+      <section class="contact-section container" id="contatti" aria-labelledby="contact-title">
+        <div class="contact-card">
+          <div class="contact-copy"><p class="eyebrow">{Contact.eyebrow}</p><h2 id="contact-title">{Contact.title.map((line, index) => <>{line}{index < Contact.title.length - 1 && <br />}</>)} <em>{Contact.emphasis}</em></h2><Contact.Content /><a class="button button-light" href={`tel:${phone}`}><Icon name="phone" size={19} /> {site.contact.callLabel} <Icon name="arrow" size={19} /></a></div>
+          <div class="contact-info">
+            <div><span class="contact-label"><Icon name="pin" size={18} /> {site.contact.visitLabel}</span><h3>{site.contact.visitTitle}</h3><address>{site.name}<br />{site.contact.street}<br />{site.contact.postcode} {site.contact.city} ({site.contact.provinceCode})</address><a href={maps}>{site.contact.directionsLabel} <span aria-hidden="true">↗</span></a></div>
+            <div><span class="contact-label"><Icon name="phone" size={17} /> {site.contact.phoneLabel}</span><a class="phone-number" href={`tel:${phone}`}>{site.contact.phone}</a><p>{site.contact.phoneNote}</p></div>
+          </div>
+          <span class="contact-decoration" aria-hidden="true">{site.contact.decoration}</span>
+        </div>
+      </section>
+    </main>
+    <footer class="container site-footer">
+      <div class="footer-top"><a class="brand" href="/" aria-label={`${site.name}, ${site.labels.backToHome}`}><span class="brand-symbol" aria-hidden="true"><Icon name="book" size={26} /></span><span class="brand-wordmark">{site.wordmark}<span>{site.brandSubtitle}</span></span><span class="brand-dot" aria-hidden="true">.</span></a><p>{site.footer.tagline}</p><a href={site.footer.facebookUrl}>{site.footer.facebookLabel} <span aria-hidden="true">↗</span></a></div>
+      <div class="footer-bottom"><span>© {new Date().getFullYear()} {site.name} · {location}</span><details class="privacy-note"><summary>{site.footer.privacyLabel}</summary><PrivacyContent /></details><a href="#contenuto">{site.labels.backToTop} ↑</a></div>
+    </footer>
+    <script>
+      const toggle = document.querySelector<HTMLButtonElement>('.menu-toggle');
+      const navigation = document.querySelector<HTMLElement>('#navigation');
+      if (toggle && navigation) {
+        toggle.hidden = false;
+        navigation.dataset.enhanced = 'true';
+        const closeMenu = () => {
+          toggle.setAttribute('aria-expanded', 'false');
+          navigation.dataset.open = 'false';
+        };
+        toggle.addEventListener('click', () => {
+          const open = toggle.getAttribute('aria-expanded') !== 'true';
+          toggle.setAttribute('aria-expanded', String(open));
+          navigation.dataset.open = String(open);
+        });
+        navigation.querySelectorAll('a').forEach((link) => link.addEventListener('click', closeMenu));
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') {
+            closeMenu();
+            toggle.focus();
+          }
+        });
+        matchMedia('(min-width: 900px)').addEventListener('change', closeMenu);
+      }
+    </script>
+  </body>
+</html>
